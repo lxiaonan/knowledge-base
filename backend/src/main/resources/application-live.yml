@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:55432/knowledge_base}
+    username: ${DB_USER:knowledge}
+    password: ${DB_PASSWORD}
+  flyway:
+    locations: classpath:db/migration/common,classpath:db/migration/postgres
+    placeholders:
+      embedding_dimensions: ${EMBEDDING_DIMENSIONS:1024}
+app:
+  import-demo-path: ${IMPORT_DEMO_PATH:}
