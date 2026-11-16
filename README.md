@@ -4,15 +4,21 @@
 
 支持 PDF、DOCX、Markdown、TXT 文档上传与异步索引、语义检索、流式问答、上下文追问、全文浏览、成员权限、个人会话和管理员数据查询。
 
-## 分支说明
+## 项目结构
 
-| 分支 | 内容 |
-| --- | --- |
-| [`main`](https://github.com/lxiaonan/knowledge-base/tree/main) | 一键部署入口、配置示例与项目文档 |
-| [`frontend`](https://github.com/lxiaonan/knowledge-base/tree/frontend) | `frontend/`：Vue 3 前端、Nginx 与前端 Dockerfile |
-| [`backend`](https://github.com/lxiaonan/knowledge-base/tree/backend) | `backend/`：Java 后端、数据库迁移、测试与后端 Dockerfile |
+前后端统一维护在 `main`，通过目录区分：
 
-前后端分别维护。一键部署会直接从这两个分支构建镜像，无需手动合并分支。
+```text
+knowledge-base/
+├── frontend/           Vue 3 前端、Nginx 与前端 Dockerfile
+├── backend/            Java 后端、数据库迁移、测试与后端 Dockerfile
+├── scripts/            开发、部署与验证脚本
+├── docs/               项目文档
+├── compose.deploy.yml  完整应用一键部署
+└── compose.yml         本地开发基础服务
+```
+
+部署直接构建当前检出的 `backend/` 和 `frontend/`，前后端来自同一个提交。新功能和修复可使用临时分支，验证后合并回 `main`。
 
 ## 快速部署
 
@@ -44,7 +50,7 @@ python scripts/deploy.py password
 python scripts/deploy.py status    # 查看服务状态
 python scripts/deploy.py logs      # 最近 100 行日志
 python scripts/deploy.py down      # 停止服务，保留数据卷
-python scripts/deploy.py up        # 启动 / 从分支重新构建应用
+python scripts/deploy.py up        # 启动 / 从当前源码重新构建应用
 ```
 
 数据库、模型、原始文件和配置加密密钥分别保存在 Docker 命名卷。部署脚本使用独立的 `.env.deploy` 与 `zhixu-deploy` 项目名，不会读取开发用 `.env` 或导入本机已有知识库数据。

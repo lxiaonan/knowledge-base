@@ -1,8 +1,8 @@
 # Docker 一键部署与运维
 
-## 分支与构建约定
+## 代码与构建约定
 
-`main` 只维护部署文件和文档；`backend` 分支包含 `backend/`，`frontend` 分支包含 `frontend/`。Docker BuildKit 从公开 GitHub 仓库读取对应分支和子目录，使用各自 Dockerfile 多阶段构建，不依赖宿主机 Java / Node.js / Ollama。
+前后端源码、部署文件和文档统一维护在 `main`。Docker Compose 使用当前工作区的 `backend/` 和 `frontend/` 作为构建目录，通过各自 Dockerfile 多阶段构建，不依赖宿主机 Java / Node.js / Ollama。前后端与数据库迁移来自同一个提交。
 
 ```sh
 git clone --branch main https://github.com/lxiaonan/knowledge-base.git
@@ -45,8 +45,6 @@ python scripts/deploy.py password
 | `RETRIEVAL_MIN_SCORE` | `0.55`，应使用自己的资料校准 |
 | `COOKIE_SECURE` | `false`；通过 HTTPS 访问时设置为 `true` |
 | `OLLAMA_IMAGE` | `ollama/ollama:latest`，可以改成固定版本或 digest |
-| `BACKEND_BUILD_CONTEXT` | 默认 `https://github.com/lxiaonan/knowledge-base.git#backend:backend` |
-| `FRONTEND_BUILD_CONTEXT` | 默认 `https://github.com/lxiaonan/knowledge-base.git#frontend:frontend` |
 
 需要多个部署实例时，在各自环境文件设置不同的 `COMPOSE_PROJECT_NAME` 和 `WEB_PORT`，并通过 `--env-file` 指向该文件。每个实例只有一个后端。
 
@@ -74,14 +72,14 @@ git pull --ff-only origin main
 python scripts/deploy.py up
 ```
 
-每次构建会读取前后端分支当前提交。为了可重复部署，建议将配置中的分支名替换成验证过的完整提交 SHA：
+每次构建都读取当前工作区的前后端源码。需要固定版本时，在干净工作区检出已验证的提交或版本标签：
 
-```dotenv
-BACKEND_BUILD_CONTEXT=https://github.com/lxiaonan/knowledge-base.git#<backend-commit-sha>:backend
-FRONTEND_BUILD_CONTEXT=https://github.com/lxiaonan/knowledge-base.git#<frontend-commit-sha>:frontend
+```sh
+git checkout <commit-sha-or-tag>
+python scripts/deploy.py up
 ```
 
-配置文件中使用真实 SHA 替换占位值。更换应用版本不会自动清空数据卷；涉及数据库迁移的版本升级前应先备份。数据库迁移后，直接切回旧镜像未必兼容，应连同升级前备份恢复。
+请使用真实提交 SHA 或版本标签替换占位值。恢复跟随主分支时执行 `git switch main`。更换应用版本不会自动清空数据卷；涉及数据库迁移的版本升级前应先备份。数据库迁移后，直接切回旧镜像未必兼容，应连同升级前备份恢复。
 
 ## 数据持久化与备份
 
@@ -138,12 +136,12 @@ python scripts/deploy.py up
 ## 前后端开发
 
 ```sh
-git clone --branch backend https://github.com/lxiaonan/knowledge-base.git knowledge-backend
-git clone --branch frontend https://github.com/lxiaonan/knowledge-base.git knowledge-frontend
+git clone --branch main https://github.com/lxiaonan/knowledge-base.git
+cd knowledge-base
 ```
 
-后端：JDK 21 + Maven 3.9+，在后端分支根目录先执行 `python scripts/local_setup.py`、`docker compose up -d postgres`，宿主机安装 Ollama 并执行 `ollama pull bge-m3`，最后执行 `python scripts/dev.py backend-run`。默认监听 8080。
+后端：JDK 21 + Maven 3.9+，在仓库根目录先执行 `python scripts/local_setup.py`、`docker compose up -d postgres`，宿主机安装 Ollama 并执行 `ollama pull bge-m3`，最后执行 `python scripts/dev.py backend-run`。默认监听 8080。
 
-前端：Node.js 22.12+，进入前端分支的 `frontend/`，执行 `npm ci` 与 `npm run dev`。开发代理默认指向同一机器的 `127.0.0.1:8080`，访问 `http://127.0.0.1:5173`。
+前端：Node.js 22.12+，在同一仓库的 `frontend/` 执行 `npm ci` 与 `npm run dev`。开发代理默认指向同一机器的 `127.0.0.1:8080`，访问 `http://127.0.0.1:5173`。
 
-若手头是同时包含 `backend/` 和 `frontend/` 的完整工作区，可执行 `python scripts/deploy.py up --local-source` 从本地源码构建。该选项仅影响构建来源，数据与容器配置仍使用部署环境。
+开发与部署共用同一份源码；完整容器启动直接执行 `python scripts/deploy.py up`。

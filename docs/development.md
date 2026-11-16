@@ -1,4 +1,4 @@
-> 此页保留完整工作区的开发说明。GitHub 前后端分别位于 `backend` / `frontend` 分支；完整部署请看仓库首页与 [部署指南](deployment.md)。
+> 前后端与部署文件统一位于 `main`，分别存放在 `backend/` 和 `frontend/`。此页介绍本地开发，完整容器部署请看 [部署指南](deployment.md)。
 
 # 知序 · 企业知识库
 

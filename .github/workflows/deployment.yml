@@ -26,7 +26,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Build both branches and start the complete stack
+      - name: Build frontend and backend from this checkout and start the complete stack
         run: python scripts/deploy.py up
       - name: Verify login, storage, indexing and semantic search
         run: python scripts/verify_deployment.py

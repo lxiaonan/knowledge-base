@@ -39,7 +39,6 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=["up", "down", "status", "logs", "password"])
     parser.add_argument("--env-file", type=Path, default=ROOT / ".env.deploy")
-    parser.add_argument("--local-source", action="store_true", help="Build backend/ and frontend/ from this full local workspace")
     args = parser.parse_args()
     config = args.env_file.resolve()
     if args.action == "password":
@@ -54,12 +53,11 @@ def main():
     if not docker:
         parser.error("Install Docker Desktop (Linux containers) or Docker Engine with Compose v2 first.")
     env = os.environ.copy()
-    if args.local_source:
+    if args.action == "up":
         for component in ["backend", "frontend"]:
             directory = ROOT / component
             if not (directory / "Dockerfile").is_file():
-                parser.error(f"Missing {component}/Dockerfile; omit --local-source to build from GitHub branches.")
-            env[component.upper() + "_BUILD_CONTEXT"] = str(directory)
+                parser.error(f"Missing {component}/Dockerfile; download the complete main branch first.")
     run([docker, "compose", "version"], env, 30)
     if args.action == "up":
         run([docker, "info", "--format", "{{.ServerVersion}}"], env, 30)
