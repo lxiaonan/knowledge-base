@@ -1,5 +1,6 @@
 name: Deployment configuration
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
@@ -16,3 +17,29 @@ jobs:
           python-version: '3.12'
       - run: python -m py_compile scripts/deploy.py
       - run: docker compose --env-file .env.deploy.example -f compose.deploy.yml config --quiet
+  smoke:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build both branches and start the complete stack
+        run: python scripts/deploy.py up
+      - name: Verify login, storage, indexing and semantic search
+        run: python scripts/verify_deployment.py
+      - name: Restart services to verify persisted state
+        run: |
+          docker compose --env-file .env.deploy -f compose.deploy.yml restart backend frontend
+          docker compose --env-file .env.deploy -f compose.deploy.yml up -d --wait --wait-timeout 300
+          python scripts/verify_deployment.py --check-persisted
+      - name: Show service status and diagnostic logs
+        if: always()
+        run: |
+          python scripts/deploy.py status
+          docker compose --env-file .env.deploy -f compose.deploy.yml logs --no-color --tail 80
+      - name: Stop the stack
+        if: always()
+        run: python scripts/deploy.py down
