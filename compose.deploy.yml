@@ -1,0 +1,99 @@
+name: zhixu-deploy
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: knowledge_base
+      POSTGRES_USER: knowledge
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Run python scripts/deploy.py up first}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U knowledge -d knowledge_base"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  model-init:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-bge-m3}
+    entrypoint: ["/bin/sh", "-ec"]
+    command: ['ollama pull "$$AI_EMBEDDING_MODEL"']
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    image: zhixu-backend:local
+    build:
+      context: ${BACKEND_BUILD_CONTEXT:-https://github.com/lxiaonan/knowledge-base.git#backend:backend}
+    environment:
+      SPRING_PROFILES_ACTIVE: live
+      DB_URL: jdbc:postgresql://postgres:5432/knowledge_base
+      DB_USER: knowledge
+      DB_PASSWORD: ${DB_PASSWORD:?Run python scripts/deploy.py up first}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?Run python scripts/deploy.py up first}
+      STORAGE_TYPE: local
+      STORAGE_PATH: /app/files
+      AI_BASE_URL: ${AI_BASE_URL:-https://ai-api.m2time.com}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-gpt-6.1-sol}
+      EMBEDDING_BASE_URL: http://ollama:11434
+      EMBEDDING_API_KEY: ollama
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-bge-m3}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1024}
+      EMBEDDING_SEND_DIMENSIONS: "false"
+      RETRIEVAL_MIN_SCORE: ${RETRIEVAL_MIN_SCORE:-0.55}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      - files-data:/app/files
+      - config-data:/app/data/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+      model-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 30
+    restart: unless-stopped
+
+  frontend:
+    image: zhixu-frontend:local
+    build:
+      context: ${FRONTEND_BUILD_CONTEXT:-https://github.com/lxiaonan/knowledge-base.git#frontend:frontend}
+    ports:
+      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8088}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  ollama-data:
+  files-data:
+  config-data:
