@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: knowledge-base
+  profiles:
+    default: demo
+  threads:
+    virtual:
+      enabled: true
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 21MB
+  flyway:
+    locations: classpath:db/migration/common
+  jackson:
+    default-property-inclusion: non_null
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    session:
+      timeout: 60m
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${COOKIE_SECURE:false}
+  error:
+    include-message: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+app:
+  demo: false
+  bootstrap-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+  storage:
+    type: ${STORAGE_TYPE:local}
+    path: ${STORAGE_PATH:./data/files}
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:}
+    secret-key: ${MINIO_SECRET_KEY:}
+    bucket: ${MINIO_BUCKET:knowledge-base}
+  ai:
+    base-url: ${AI_BASE_URL:https://ai-api.m2time.com}
+    api-key: ${AI_API_KEY:}
+    chat-model: ${AI_CHAT_MODEL:gpt-6.1-sol}
+    embedding-base-url: ${EMBEDDING_BASE_URL:http://127.0.0.1:11434}
+    embedding-api-key: ${EMBEDDING_API_KEY:ollama}
+    embedding-model: ${AI_EMBEDDING_MODEL:bge-m3}
+    embedding-dimensions: ${EMBEDDING_DIMENSIONS:1024}
+    embedding-dimensions-enabled: ${EMBEDDING_SEND_DIMENSIONS:false}
+    min-score: ${RETRIEVAL_MIN_SCORE:0.55}
