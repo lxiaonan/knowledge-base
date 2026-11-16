@@ -123,6 +123,8 @@ python scripts/deploy.py up
 
 ## 停止与故障排查
 
+默认部署已在 GitHub Actions 的 Ubuntu 干净环境完成真实 BGE-M3 检索与容器重启持久化验收，详见 [验证记录](verification.md#分支发布与完整-docker-部署验收2026-11-16)。
+
 `python scripts/deploy.py down` 停止服务并保留全部数据卷。**不要添加 `down -v`**，它会删除数据卷。
 
 - 镜像、依赖或模型下载失败：检查对应仓库的网络连接，查看 `logs`，恢复网络后重新执行 `up`。
